@@ -4,10 +4,9 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"html"
+	"io"
 	"log"
-	"net/http"
-	"time"
+	"net"
 )
 
 func main() {
@@ -24,20 +23,31 @@ func main() {
 	//this func is called post TLS cert. verification with raw certs.
 	cfg.VerifyPeerCertificate = func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
 		for _, v := range rawCerts {
-			fmt.Printf("Certificate verified:%+v\n", v)
+			fmt.Printf("Certificate verified\n")
 		}
 		return nil
 	}
 
-	srv := &http.Server{
-		TLSConfig:    cfg,
-		ReadTimeout:  time.Minute,
-		WriteTimeout: time.Minute,
+	l, err := tls.Listen("tcp4", ":443", cfg)
+	if err != nil {
+		log.Fatal(err)
 	}
-
-	http.HandleFunc("/foo", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "Hello from tls bit, %q", html.EscapeString(r.URL.Path))
-	})
-
-	log.Fatal(srv.ListenAndServeTLS("", ""))
+	defer l.Close()
+	for {
+		// Wait for a connection.
+		conn, err := l.Accept()
+		if err != nil {
+			log.Fatal(err)
+		}
+		// Handle the connection in a new goroutine.
+		// The loop then returns to accepting, so that
+		// multiple connections may be served concurrently.
+		go func(c net.Conn) {
+			fmt.Printf("accepting new conection\n")
+			// Echo all incoming data.
+			io.Copy(c, c)
+			// Shut down the connection.
+			c.Close()
+		}(conn)
+	}
 }
