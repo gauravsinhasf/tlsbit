@@ -10,20 +10,22 @@ import (
 )
 
 func main() {
-	cert, err := tls.LoadX509KeyPair("cert.pem", "key.pem")
-	if err != nil {
-		fmt.Printf("LoadX509KeyPair() failed:%v", err)
-		return
-	}
+	/*	cert, err := tls.LoadX509KeyPair("cert.pem", "key.pem")
+		if err != nil {
+			fmt.Printf("LoadX509KeyPair() failed:%v", err)
+			return
+		}*/
 
-	cfg := &tls.Config{Certificates: []tls.Certificate{cert}}
+	cfg := &tls.Config{}
 	// Request client certificate from the client
 	cfg.ClientAuth = tls.RequestClientCert
+	cfg.GetCertificate = GetCertificate
 
 	//this func is called post TLS cert. verification with raw certs.
 	cfg.VerifyPeerCertificate = func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
 		for _, v := range rawCerts {
-			fmt.Printf("Certificate verified\n")
+			//fmt.Printf("Certificate verified:%v\n", v)
+			_ = v
 		}
 		return nil
 	}
@@ -50,4 +52,17 @@ func main() {
 			c.Close()
 		}(conn)
 	}
+}
+
+func GetCertificate(clientHelloInfo *tls.ClientHelloInfo) (*tls.Certificate, error) {
+	cert, err := tls.LoadX509KeyPair("cert.pem", "key.pem")
+	if err != nil {
+		fmt.Printf("LoadX509KeyPair() failed:%v\n", err)
+		return nil, nil
+	}
+
+	fmt.Printf("cert:%+v\n", cert.Leaf)
+
+	fmt.Printf("GetCertificate: client Hello:%v \n", clientHelloInfo.ServerName)
+	return &cert, nil
 }
