@@ -10,16 +10,11 @@ import (
 )
 
 func main() {
-	/*	cert, err := tls.LoadX509KeyPair("cert.pem", "key.pem")
-		if err != nil {
-			fmt.Printf("LoadX509KeyPair() failed:%v", err)
-			return
-		}*/
-
 	cfg := &tls.Config{}
-	// Request client certificate from the client
-	cfg.ClientAuth = tls.RequestClientCert
 	cfg.GetCertificate = GetCertificate
+
+	// Request client certificate from the client
+	// cfg.ClientAuth = tls.RequestClientCert
 
 	//this func is called post TLS cert. verification with raw certs.
 	cfg.VerifyPeerCertificate = func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
@@ -36,24 +31,32 @@ func main() {
 	}
 	defer l.Close()
 	for {
-		// Wait for a connection.
 		conn, err := l.Accept()
 		if err != nil {
 			log.Fatal(err)
 		}
-		// Handle the connection in a new goroutine.
-		// The loop then returns to accepting, so that
-		// multiple connections may be served concurrently.
+
 		go func(c net.Conn) {
-			fmt.Printf("accepting new conection\n")
-			// Echo all incoming data.
-			io.Copy(c, c)
+			buf := make([]byte, 512)
+			n, _ := c.Read(buf)
+			fmt.Printf("accepting new conection:%q\n", buf[:n])
+
+			io.WriteString(c, `<!DOCTYPE html>
+								<html>
+								    <head>
+								        <title>Standard response</title>
+								    </head>
+								    <body>
+								Hello World!
+								    </body>
+								</html>`)
 			// Shut down the connection.
 			c.Close()
 		}(conn)
 	}
 }
 
+//Allows working with the client hello message post TLS cert verify
 func GetCertificate(clientHelloInfo *tls.ClientHelloInfo) (*tls.Certificate, error) {
 	cert, err := tls.LoadX509KeyPair("cert.pem", "key.pem")
 	if err != nil {
