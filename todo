@@ -1,0 +1,4 @@
+- on get certificate - build a self signed cert with cn = servername if any in client hello
+- map localaddr <-> remote addr to local connection and remote connection.
+- on accept
+- select connections - read and write to corresponding connection

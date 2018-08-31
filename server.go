@@ -30,6 +30,8 @@ func main() {
 		log.Fatal(err)
 	}
 	defer l.Close()
+	var connections map[string]net.Conn = make(map[string]net.Conn, 1000)
+
 	for {
 		conn, err := l.Accept()
 		if err != nil {
@@ -50,6 +52,11 @@ func main() {
 								Hello World!
 								    </body>
 								</html>`)
+
+			connections[c.LocalAddr().String()] = c
+			for key, _ := range connections {
+				fmt.Printf("\nconnections:%+v\n", key)
+			}
 			// Shut down the connection.
 			c.Close()
 		}(conn)
